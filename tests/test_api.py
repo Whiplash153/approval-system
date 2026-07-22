@@ -2,7 +2,7 @@ from app.main import app
 from app.db.session import get_db
 from app.models import Vote, Proposal, Participant, AuditLog, User
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from tests.reserve_db_session import SessionLocal as TestSessionLocal
 
@@ -660,7 +660,7 @@ def test_vote_after_deadline():
         "description": "Test description",
         "author_id": 1,
         "participant_ids": [1, 2],
-        "deadline": str(datetime.utcnow() - timedelta(minutes=1))
+        "deadline": str(datetime.now(UTC) - timedelta(minutes=1))
     }
 
     #HTTP-REQUEST
@@ -674,6 +674,7 @@ def test_vote_after_deadline():
 
     #DEADLINE GOT CHECK
     assert data["deadline"] is not None
+    assert datetime.fromisoformat(data["deadline"]).tzinfo is not None
 
     # FIND PROPOSAL ID
     proposal_id = data["id"]
@@ -693,6 +694,21 @@ def test_vote_after_deadline():
 
     data = vote.json()
     assert data["detail"] == "Proposal in a wrong state"
+
+
+def test_naive_deadline_rejected():
+
+    payload = {
+        "title": "Test proposal",
+        "description": "Test description",
+        "author_id": 1,
+        "participant_ids": [1, 2],
+        "deadline": "2026-07-22T12:00:00",
+    }
+
+    response = client.post("/proposals", json=payload)
+
+    assert response.status_code == 422
 
 # ==== FINISH TESTS ====
 # ======================
@@ -938,8 +954,6 @@ def test_audit_log():
     assert "start_voting" in actions
     assert "create_vote" in actions
     assert "manual_finish" in actions
-
-
 
 
 

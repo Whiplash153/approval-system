@@ -1,6 +1,6 @@
 import pytest
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from app.services.proposal_service import ProposalService
 from app.models.user import User
@@ -458,7 +458,7 @@ def test_deadline_auto_finish(session):
                                        "yo",
                                        user1.id,
                                        [user1.id, user2.id],
-                                       deadline=datetime.utcnow() - timedelta(minutes=1))
+                                       deadline=datetime.now(UTC) - timedelta(minutes=1))
 
     service.start_voting(proposal.id, user1.id)
 
@@ -467,7 +467,6 @@ def test_deadline_auto_finish(session):
     #START TEST
     with pytest.raises(InvalidProposalStatusError):
         service.create_vote(proposal.id, user1.id, "approve")
-
 
 
 

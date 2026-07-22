@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from app.repositories.user_repository import UserRepo
 from app.repositories.vote_repository import VoteRepo
@@ -47,6 +47,15 @@ class ProposalService:
         )
         self.audit_repo.create(new_log)
 
+    @staticmethod
+    def _deadline_has_passed(deadline):
+        if deadline.tzinfo is None:
+            deadline = deadline.replace(tzinfo=UTC)
+        else:
+            deadline = deadline.astimezone(UTC)
+
+        return datetime.now(UTC) > deadline
+
     def _maybe_finish(self, proposal):
 
         #ALL VOTED CHECK
@@ -55,10 +64,9 @@ class ProposalService:
             return
 
         #DEADLINE CHECK
-        if proposal.deadline:
-            if datetime.utcnow() > proposal.deadline:
-                self._finish_proposal(proposal.id, action="auto_finish(deadline)")
-                return
+        if proposal.deadline and self._deadline_has_passed(proposal.deadline):
+            self._finish_proposal(proposal.id, action="auto_finish(deadline)")
+            return
 
     def _finish_proposal(self, proposal_id, action):
 
@@ -322,7 +330,7 @@ class ProposalService:
             raise InvalidProposalStatusError
 
         # DEADLINE CHECK
-        if proposal.deadline and datetime.utcnow() > proposal.deadline:
+        if proposal.deadline and self._deadline_has_passed(proposal.deadline):
             raise InvalidProposalStatusError
 
         # CHANGE VOTE
@@ -365,7 +373,7 @@ class ProposalService:
             raise InvalidProposalStatusError
 
         #DEADLINE CHECK
-        if proposal.deadline and datetime.utcnow() > proposal.deadline:
+        if proposal.deadline and self._deadline_has_passed(proposal.deadline):
             raise InvalidProposalStatusError
 
         #CREATE VOTE
@@ -432,7 +440,6 @@ class ProposalService:
             raise ProposalNotFoundError
 
         return proposal
-
 
 
 

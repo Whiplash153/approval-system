@@ -1,5 +1,4 @@
-from pydantic import BaseModel, Field
-from datetime import datetime
+from pydantic import AwareDatetime, BaseModel, Field
 
 class AuditLogCreateSchema(BaseModel):
 
@@ -13,4 +12,4 @@ class AuditLogResponseSchema(BaseModel):
     proposal_id: int
     user_id: int
     action: str
-    created_at: datetime
+    created_at: AwareDatetime

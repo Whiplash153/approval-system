@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, ForeignKey, DateTime
-from datetime import datetime
+from datetime import UTC, datetime
 
 from app.db.base import Base
 
@@ -11,8 +11,10 @@ class AuditLog(Base):
     proposal_id: Mapped[int] = mapped_column(ForeignKey("proposals.id"))
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     action: Mapped[str] = mapped_column(String, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.utcnow())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+    )
 
     proposal: Mapped["Proposal"] = relationship(back_populates="audit_logs")
     user: Mapped["User"] = relationship(back_populates="audit_logs")
-
