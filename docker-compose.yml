@@ -1,7 +1,9 @@
+name: approval_system
+
 services:
 
   backend:
-    build: .
+    image: ghcr.io/whiplash153/approval-api:latest
     ports:
       - "8001:8000"
     env_file:
