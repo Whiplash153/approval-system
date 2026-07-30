@@ -11,6 +11,10 @@ permissions:
 
 jobs:
   tests:
+    permissions:
+      contents: read
+      packages: write
+
     runs-on: ubuntu-latest
 
     services:
@@ -79,5 +83,6 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /opt/apps/approval-system
+            git pull
             docker pull ghcr.io/whiplash153/approval-api:latest
             docker compose up -d
