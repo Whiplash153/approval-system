@@ -695,6 +695,35 @@ def test_vote_after_deadline():
     data = vote.json()
     assert data["detail"] == "Proposal in a wrong state"
 
+    # GET PROPOSAL RESULT
+    result_response = client.get(
+        f"/proposals/{proposal_id}/result"
+    )
+
+    result_data = result_response.json()
+
+    # STATUS CODE CHECK
+    assert result_response.status_code == 200
+
+    # EXPIRED PROPOSAL FINISHED
+    assert result_data["status"] == "rejected"
+
+    # AUDIT LOG CHECK
+    session = TestSessionLocal()
+
+    deadline_logs = (
+        session.query(AuditLog)
+        .filter(
+            AuditLog.proposal_id == proposal_id,
+            AuditLog.action == "auto_finish(deadline)",
+        )
+        .all()
+    )
+
+    assert len(deadline_logs) == 1
+
+    session.close()
+
 
 def test_naive_deadline_rejected():
 

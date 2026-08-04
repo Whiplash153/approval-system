@@ -329,8 +329,11 @@ class ProposalService:
         if proposal.status != ProposalStatus.VOTING:
             raise InvalidProposalStatusError
 
-        # DEADLINE CHECK
-        if proposal.deadline and self._deadline_has_passed(proposal.deadline):
+        #DEADLINE CHECK
+        self._maybe_finish(proposal)
+
+        if proposal.status != ProposalStatus.VOTING:
+            self.session.commit()
             raise InvalidProposalStatusError
 
         # CHANGE VOTE
@@ -373,7 +376,10 @@ class ProposalService:
             raise InvalidProposalStatusError
 
         #DEADLINE CHECK
-        if proposal.deadline and self._deadline_has_passed(proposal.deadline):
+        self._maybe_finish(proposal)
+
+        if proposal.status != ProposalStatus.VOTING:
+            self.session.commit()
             raise InvalidProposalStatusError
 
         #CREATE VOTE

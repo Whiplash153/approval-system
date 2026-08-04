@@ -468,6 +468,42 @@ def test_deadline_auto_finish(session):
     with pytest.raises(InvalidProposalStatusError):
         service.create_vote(proposal.id, user1.id, "approve")
 
+    assert proposal.status == ProposalStatus.REJECTED
+
+def test_change_vote_after_deadline_finishes_proposal(session):
+
+    #SETUP USERS
+    user1, user2 = _create_two_users(session)
+
+    #SETUP PROPOSAL
+    service = ProposalService(session)
+
+    proposal = service.create_proposal(
+        "open window",
+        "yo",
+        user1.id,
+        [user1.id, user2.id],
+        deadline=datetime.now(UTC) + timedelta(hours=1),
+    )
+
+    #START VOTING
+    service.start_voting(proposal.id, user1.id)
+
+    vote = service.create_vote(proposal.id, user1.id, "reject")
+
+    assert proposal.status == ProposalStatus.VOTING
+
+    #CHANGE DEADLINE TIME
+    proposal.deadline = datetime.now(UTC) - timedelta(minutes=1)
+    session.commit()
+
+    #TEST CHANGE VOTE REJECTED
+    with pytest.raises(InvalidProposalStatusError):
+        service.change_vote(proposal.id, user1.id, "approve")
+
+    #TEST PROPOSAL FINISHED
+    assert proposal.status == ProposalStatus.REJECTED
+    assert vote.value == "reject"
 
 
 
