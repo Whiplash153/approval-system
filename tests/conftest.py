@@ -25,3 +25,11 @@ def session():
     yield session
     session.close()
 
+
+@pytest.fixture(scope="session")
+def prepare_postgres_schema():
+    import app.models
+    from tests.reserve_db_session import engine
+
+    Base.metadata.create_all(bind=engine)
+

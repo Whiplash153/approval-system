@@ -1,4 +1,5 @@
 import threading
+import pytest
 
 from app.services.proposal_service import ProposalService
 from app.models.enums import ProposalStatus
@@ -9,6 +10,8 @@ from app.models.participant import Participant
 from app.models.proposal import Proposal
 from app.models.user import User
 from app.models.audit import AuditLog
+
+pytestmark = pytest.mark.usefixtures("prepare_postgres_schema")
 
 #CLEAR DB
 def _clear_db():

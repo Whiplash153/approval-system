@@ -52,10 +52,15 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/approval
         run: poetry run alembic upgrade head
 
+      - name: Create test database
+        env:
+          PGPASSWORD: postgres
+        run: createdb --host=localhost --username=postgres test_approve_db
+
       - name: Run tests
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/approval
-          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/approval
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_approve_db
         run: poetry run pytest
 
       - name: Build Docker Image

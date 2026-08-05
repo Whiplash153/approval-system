@@ -1,3 +1,5 @@
+import pytest
+
 from app.main import app
 from app.db.session import get_db
 from app.models import Vote, Proposal, Participant, AuditLog, User
@@ -9,6 +11,7 @@ from tests.reserve_db_session import SessionLocal as TestSessionLocal
 from fastapi.testclient import TestClient
 
 client = TestClient(app)
+pytestmark = pytest.mark.usefixtures("prepare_postgres_schema")
 
 # ==== GET TEST DB ====
 # =====================
