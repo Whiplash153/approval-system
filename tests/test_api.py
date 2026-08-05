@@ -724,7 +724,6 @@ def test_vote_after_deadline():
 
     session.close()
 
-
 def test_naive_deadline_rejected():
 
     payload = {
@@ -929,6 +928,14 @@ def test_get_proposal_votes():
     #VALUE CHECK
     assert found_vote is not None
     assert found_vote["value"] == "approve"
+
+def test_invalid_proposal_id():
+
+    # HTTP REQUEST WITH INVALID PATH PARAMETER
+    response = client.get("/proposals/not-a-number")
+
+    # FASTAPI VALIDATION ERROR
+    assert response.status_code == 422
 
 # ==== AUDIT TESTS ====
 # =====================

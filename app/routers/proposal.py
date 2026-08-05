@@ -49,7 +49,7 @@ def proposal_response_schema(proposal, votes=None):
 # ===================================
 
 @router.get("/proposals/{proposal_id}", response_model=ProposalResponseSchema)
-def get_proposal_by_id(proposal_id, session = Depends(get_db)):
+def get_proposal_by_id(proposal_id: int, session = Depends(get_db)):
 
     service = ProposalService(session)
     proposal = service.get_proposal(proposal_id=proposal_id)
@@ -57,7 +57,7 @@ def get_proposal_by_id(proposal_id, session = Depends(get_db)):
     return proposal_response_schema(proposal)
 
 @router.get("/proposals/{proposal_id}/result", response_model=ProposalResultSchema)
-def get_proposal_result(proposal_id, session = Depends(get_db)):
+def get_proposal_result(proposal_id: int, session = Depends(get_db)):
 
     service = ProposalService(session)
     proposal = service.get_proposal(proposal_id=proposal_id)
@@ -67,7 +67,7 @@ def get_proposal_result(proposal_id, session = Depends(get_db)):
     )
 
 @router.get("/proposals/{proposal_id}/votes", response_model=ProposalResponseSchema)
-def get_proposal_with_votes(proposal_id, session = Depends(get_db)):
+def get_proposal_with_votes(proposal_id: int, session = Depends(get_db)):
 
     service = ProposalService(session)
     proposal = service.get_proposal_with_votes(proposal_id=proposal_id)
@@ -87,7 +87,7 @@ def create_proposal(data: ProposalCreateSchema, session = Depends(get_db)):
     return proposal_response_schema(proposal)
 
 @router.delete("/proposals/{proposal_id}", response_model=ProposalResponseSchema)
-def delete_proposal(proposal_id, data: DeleteProposalSchema, session = Depends(get_db)):
+def delete_proposal(proposal_id: int, data: DeleteProposalSchema, session = Depends(get_db)):
 
     service = ProposalService(session)
     proposal = service.delete_proposal(proposal_id=proposal_id, author_id=data.author_id)
@@ -95,7 +95,7 @@ def delete_proposal(proposal_id, data: DeleteProposalSchema, session = Depends(g
     return proposal_response_schema(proposal)
 
 @router.post("/proposals/{proposal_id}/start", response_model=ProposalResponseSchema)
-def start_proposal(proposal_id, data: StartProposalSchema, session = Depends(get_db)):
+def start_proposal(proposal_id: int, data: StartProposalSchema, session = Depends(get_db)):
 
     service = ProposalService(session)
     proposal = service.start_voting(proposal_id=proposal_id, author_id=data.author_id)
@@ -103,7 +103,7 @@ def start_proposal(proposal_id, data: StartProposalSchema, session = Depends(get
     return proposal_response_schema(proposal)
 
 @router.post("/proposals/{proposal_id}/finish", response_model=ProposalResponseSchema)
-def finish_proposal(proposal_id, data: FinishProposalSchema, session = Depends(get_db)):
+def finish_proposal(proposal_id: int, data: FinishProposalSchema, session = Depends(get_db)):
 
     service = ProposalService(session)
     proposal = service.manual_finish(proposal_id=proposal_id, author_id=data.author_id)
@@ -111,7 +111,7 @@ def finish_proposal(proposal_id, data: FinishProposalSchema, session = Depends(g
     return proposal_response_schema(proposal)
 
 @router.patch("/proposals/{proposal_id}", response_model=ProposalResponseSchema)
-def update_proposal(proposal_id, data: UpdateProposalSchema, session = Depends(get_db)):
+def update_proposal(proposal_id: int, data: UpdateProposalSchema, session = Depends(get_db)):
 
     service = ProposalService(session)
     proposal = service.update_proposal(proposal_id=proposal_id,
