@@ -18,7 +18,8 @@ from app.core.errors import (
     NotParticipantError,
     InvalidProposalStatusError,
     ProposalNotFoundError,
-    VoteNotFoundError
+    VoteNotFoundError,
+    InvalidVoteValueError
 )
 
 # ===== HELPERS =====
@@ -141,6 +142,26 @@ def test_create_vote_invalid_status(session):
     with pytest.raises(InvalidProposalStatusError):
         service.create_vote(proposal.id, user2.id, "approve")
 
+def test_create_vote_invalid_value(session):
+
+    # SETUP USERS
+    user1, user2 = _create_two_users(session)
+
+    # SETUP PROPOSAL
+    service = ProposalService(session)
+    proposal = service.create_proposal(
+        "open window",
+        "yo",
+        user1.id,
+        [user1.id, user2.id]
+    )
+
+    service.start_voting(proposal.id, user1.id)
+
+    # TEST
+    with pytest.raises(InvalidVoteValueError):
+        service.create_vote(proposal.id, user1.id, "banana")
+
 def test_change_vote(session):
 
     #SETUP USERS
@@ -163,6 +184,27 @@ def test_change_vote(session):
     assert the_vote.user_id == user1.id
     assert the_vote.proposal_id == proposal.id
     assert the_vote.value == "reject"
+
+def test_change_vote_invalid_value(session):
+
+    # SETUP USERS
+    user1, user2 = _create_two_users(session)
+
+    # SETUP PROPOSAL
+    service = ProposalService(session)
+    proposal = service.create_proposal(
+        "open window",
+        "yo",
+        user1.id,
+        [user1.id, user2.id]
+    )
+
+    service.start_voting(proposal.id, user1.id)
+    service.create_vote(proposal.id, user1.id, "approve")
+
+    # TEST
+    with pytest.raises(InvalidVoteValueError):
+        service.change_vote(proposal.id, user1.id, "banana")
 
 def test_change_vote_not_found(session):
 

@@ -23,7 +23,8 @@ from app.core.errors import (
     UserNotFoundError,
     EmptyParticipantsError,
     DuplicateParticipantsError,
-    VoteNotFoundError
+    VoteNotFoundError,
+    InvalidVoteValueError
 )
 
 class ProposalService:
@@ -309,6 +310,10 @@ class ProposalService:
         if not proposal:
             raise ProposalNotFoundError
 
+        # VOTE VALUE CHECK
+        if value not in ("approve", "reject"):
+            raise InvalidVoteValueError
+
         # IS USER PARTICIPANT
         participant = self.participant_repo.get_by_user_and_proposal(
             user_id,
@@ -360,6 +365,10 @@ class ProposalService:
         proposal = self.proposal_repo.locked_get_by_id(proposal_id)
         if not proposal:
             raise ProposalNotFoundError
+
+        # VOTE VALUE CHECK
+        if value not in ("approve", "reject"):
+            raise InvalidVoteValueError
 
         #IS USER PARTICIPANT
         participant = self.participant_repo.get_by_user_and_proposal(user_id, proposal_id)
