@@ -87,7 +87,10 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            set -e
             cd /opt/apps/approval-system
             git pull
             docker pull ghcr.io/whiplash153/approval-api:latest
+            docker compose run --rm backend alembic upgrade head
             docker compose up -d
+            curl --fail --retry 5 --retry-delay 2 --retry-connrefused http://localhost:8001/health
