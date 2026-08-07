@@ -18,10 +18,10 @@ from app.core.errors import (
 app = FastAPI()
 app.include_router(router)
 
-#TEST ENDPOINT
+# HEALTH ENDPOINT
 @app.get("/health")
 async def health():
-    return {"status": "CI/CD deployment works"}
+    return {"status": "ok"}
 
 #ERRORS MAPPING
 @app.exception_handler(ProposalNotFoundError)
