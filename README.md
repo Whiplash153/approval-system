@@ -1,162 +1,116 @@
-# Approval System (L3)
+# Approval System
 
-## Goal
+An educational backend REST API for managing proposals and collective decision-making.
 
-This project implements an approval system where users can create proposals, assign participants, collect votes, and reach a final decision.
+Users can create proposals, assign participants, collect votes, and determine a final result. The project focuses on business-rule enforcement, proposal lifecycle management, audit logging, and transactional consistency.
 
-The system models a controlled decision-making workflow with proposal lifecycle management, voting deadlines, audit logging, and transactional consistency.
+## Key Features
 
----
+- Controlled proposal lifecycle: `draft`, `voting`, `approved`, `rejected`, and `deleted`
+- Proposal editing in draft status and soft deletion from any active or final status
+- Participant validation and author-only operations
+- Voting and vote changing while voting is active
+- Manual finalization and automatic finalization after all participants vote
+- Timezone-aware voting deadlines
+- Audit logging for important business actions
+- PostgreSQL row-level locking for concurrent changes
+- Business logic, API, and transaction tests
 
-## What was done
+## Tech Stack
 
-- Implemented proposal creation with participants validation
-- Added participant entity with proposal membership tracking
-- Implemented proposal lifecycle with controlled status transitions
-- Added proposal editing in draft status
-- Added soft deletion of proposals
-- Implemented voting and revoting functionality
-- Added manual and automatic proposal finishing
-- Implemented voting deadlines
-- Added audit log for important business actions
-- Implemented transactional protection for concurrent voting scenarios
-- Added Alembic migrations support
-- Implemented API using FastAPI
-- Added database layer using SQLAlchemy ORM
-- Covered business logic, API, and transaction scenarios with pytest tests
-
----
+- Python 3.12
+- FastAPI and Pydantic
+- SQLAlchemy ORM
+- PostgreSQL 17
+- Alembic
+- pytest
+- Docker Compose
+- GitHub Actions
 
 ## Architecture
 
-The project follows a layered architecture:
+The application uses a layered architecture:
 
-- **Router (FastAPI)** — handles HTTP requests and responses
-- **Service layer** — contains business logic and lifecycle rules
-- **Repository layer** — handles database interactions
-- **Models (SQLAlchemy ORM)** — define database structure and relationships
-- **Schemas (Pydantic)** — define request and response validation
-- **Alembic** — manages database schema migrations
+```text
+HTTP request
+    ↓
+Router (FastAPI)
+    ↓
+Service layer
+    ↓
+Repository layer
+    ↓
+PostgreSQL
+```
 
-Main domain entities:
+- **Routers** accept HTTP requests and return responses
+- **Schemas (Pydantic)** validate request and response data
+- **Service layer** contains business rules and controls transaction boundaries
+- **Repositories** isolate database queries
+- **Models (SQLAlchemy ORM)** define persisted entities and relationships
+- **Alembic** manages database schema migrations
 
-- User
-- Proposal
-- Vote
-- Participant
-- AuditLog
+The main domain entities are `User`, `Proposal`, `Participant`, `Vote`, and `AuditLog`.
 
-Business rules are centralized inside the service layer.
-Status transitions are controlled through a dedicated transition map.
+Operations that change a proposal or its votes lock the proposal row with `SELECT FOR UPDATE`. This prevents concurrent requests from making decisions based on the same outdated proposal state.
 
----
+## Proposal Lifecycle
 
-## Business Logic
+```text
+draft ──→ voting ──→ approved
+  │          │
+  │          └────→ rejected
+  │
+  └────────────────→ deleted
 
-The system enforces the following rules:
+voting / approved / rejected ──→ deleted
+```
 
-- Proposal lifecycle is controlled by status transitions:
-  - draft → voting
-  - voting → approved
-  - voting → rejected
-  - draft/voting/approved/rejected → deleted
+The proposal author can edit a proposal only while it is in `draft`. The author can start voting, finish voting manually, or soft-delete the proposal.
 
-- Only the proposal author can:
-  - start voting
-  - finish voting manually
-  - edit a proposal
-  - delete a proposal
+A proposal is approved only when the number of `approve` votes is greater than the number of `reject` votes. A tie, including a proposal without votes, results in `rejected`.
 
-- Proposal editing is allowed only in draft status
+## Voting and Deadlines
 
-- Only assigned participants can vote
+Only assigned participants can vote. Each participant has one vote and may change it while the proposal remains in `voting` status. Supported values are `approve` and `reject`.
 
-- Participants can change their vote while voting is active
+A proposal is finalized automatically when all participants have voted. A deadline is checked when a participant attempts to create or change a vote. If the deadline has passed, the proposal is finalized first and the attempted vote is rejected.
 
-- Voting is allowed only in voting status
+Deadline processing is intentionally request-driven: the project does not use a background scheduler. Therefore, a proposal may remain in `voting` after its deadline until the next voting action.
 
-- Proposal can finish automatically when:
-  - all participants have voted
-  - deadline is reached
+## API
 
-- Proposal can also be finished manually by the author
+Interactive OpenAPI documentation is available at `/docs` while the application is running.
 
-- Final result is determined by majority of votes:
-  - approve > reject → approved
-  - otherwise → rejected
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/health` | Check application availability |
+| `POST` | `/proposals` | Create a proposal |
+| `GET` | `/proposals/{proposal_id}` | Get a proposal |
+| `PATCH` | `/proposals/{proposal_id}` | Update a draft proposal |
+| `DELETE` | `/proposals/{proposal_id}` | Soft-delete a proposal |
+| `POST` | `/proposals/{proposal_id}/start` | Start voting |
+| `POST` | `/proposals/{proposal_id}/finish` | Finish voting manually |
+| `GET` | `/proposals/{proposal_id}/result` | Get the proposal status |
+| `GET` | `/proposals/{proposal_id}/votes` | Get a proposal with its votes |
+| `POST` | `/votes` | Create a vote |
+| `PATCH` | `/votes` | Change an existing vote |
 
-- Deleted proposals are hidden from regular read operations
-
-- Important actions are recorded in audit log
-
----
-
-## API Overview
-
-Main endpoints:
-
-- `POST /proposals` — create proposal
-- `GET /proposals/{id}` — get proposal
-- `GET /proposals/{id}/result` — get proposal result
-- `GET /proposals/{id}/votes` — get proposal with votes
-- `PATCH /proposals/{id}` — update proposal in draft status
-- `DELETE /proposals/{id}` — soft delete proposal
-- `POST /proposals/{id}/start` — start proposal voting
-- `POST /proposals/{id}/finish` — manually finish proposal
-- `POST /votes` — create vote
-- `PATCH /votes` — change existing vote
-
----
+Deleted proposals are hidden from regular read operations.
 
 ## Error Handling
 
-The application uses custom domain exceptions to represent business rule violations.
+Business logic raises domain-specific exceptions in the service layer. FastAPI exception handlers convert them into HTTP responses:
 
-Exceptions are mapped to HTTP responses globally through FastAPI exception handlers.
+| Status | Meaning |
+| --- | --- |
+| `400 Bad Request` | Invalid domain data |
+| `403 Forbidden` | User is not allowed to perform the operation |
+| `404 Not Found` | Proposal, user, or vote does not exist |
+| `409 Conflict` | Operation conflicts with the current proposal or vote state |
+| `422 Unprocessable Entity` | Request body does not match the Pydantic schema |
 
-Response codes:
-
-- `400 Bad Request`
-  - InvalidVoteValueError
-  - EmptyParticipantsError
-  - DuplicateParticipantsError
-
-- `403 Forbidden`
-  - NotParticipantError
-  - NotAuthorError
-
-- `404 Not Found`
-  - ProposalNotFoundError
-  - UserNotFoundError
-  - VoteNotFoundError
-
-- `409 Conflict`
-  - AlreadyVotedError
-  - InvalidProposalStatusError
-
-Business logic raises domain-specific exceptions inside the service layer, while HTTP response mapping is handled in the application entry point.
-
----
-
-## Limitations
-
-The system intentionally does NOT include:
-
-- Authentication and authorization system
-- User interface (UI)
-- Role-based permissions beyond proposal author and participants
-- Weighted voting
-- Veto rights
-- Quorum rules
-- Multi-stage approval workflows
-- Background jobs and schedulers
-- Notifications
-
-This project focuses on approval workflow lifecycle, voting mechanics, transactional consistency, and clean service-layer architecture.
-
----
-
-## Run
+## Running with Docker
 
 Create the environment file:
 
@@ -164,23 +118,29 @@ Create the environment file:
 cp .env.example .env
 ```
 
-Replace the example username and password in `.env`, then build and start the application:
+Replace the example database password in `.env`. The same value must be used in `POSTGRES_PASSWORD`, `DATABASE_URL`, and `TEST_DATABASE_URL`.
+
+Pull the published application image and start PostgreSQL:
 
 ```bash
-docker compose up -d --build
+docker compose pull
+docker compose up -d postgres
 ```
 
-Apply database migrations:
+Apply migrations and start the backend:
 
 ```bash
-docker compose exec backend alembic upgrade head
+docker compose run --rm backend alembic upgrade head
+docker compose up -d backend
 ```
 
-Open Swagger UI:
+Check the application:
 
-```text
-http://localhost:8001/docs
+```bash
+curl http://localhost:8001/health
 ```
+
+Swagger UI is available at [http://localhost:8001/docs](http://localhost:8001/docs).
 
 For subsequent starts, use:
 
@@ -198,12 +158,51 @@ PostgreSQL data is preserved in the `postgres_data` Docker volume.
 
 ## Tests
 
-Install development dependencies and run the test suite:
+Tests use SQLite for service-level scenarios and a separate PostgreSQL database for API and transaction scenarios.
+
+Install development dependencies, start PostgreSQL, and run the complete test suite:
 
 ```bash
 poetry install
+docker compose up -d postgres
 poetry run pytest -v
 ```
 
-Tests use the separate database configured by `TEST_DATABASE_URL`. Never point
-`TEST_DATABASE_URL` to the application database.
+The PostgreSQL container creates the test database defined by `POSTGRES_TEST_DB` during its first initialization. `TEST_DATABASE_URL` must point to that database and must never point to the application database. The test configuration checks this before connecting.
+
+The transaction test sends simultaneous votes from separate database sessions and verifies that both votes are stored and the proposal reaches the correct final status.
+
+## Database Migrations
+
+Alembic is the only mechanism used to manage the application database schema.
+
+Apply all migrations with:
+
+```bash
+docker compose run --rm backend alembic upgrade head
+```
+
+## CI/CD
+
+Every push to `main` starts the GitHub Actions workflow:
+
+1. Start an isolated PostgreSQL service.
+2. Apply Alembic migrations.
+3. Create a separate test database and run the test suite.
+4. Build the Docker image and publish it to GitHub Container Registry.
+5. Connect to the VPS, apply migrations, and restart the application.
+6. Verify the deployment through `/health`.
+
+The image is deployed only after the tests pass.
+
+## Intentional Limitations
+
+This is an educational project with a deliberately limited scope:
+
+- No authentication: author and user IDs are accepted from request data
+- No user-management endpoints: proposals reference users that already exist in the database
+- No background scheduler: deadline processing occurs during voting actions
+- No public endpoint for reading the audit log
+- No user interface, notifications, weighted voting, veto rights, quorum rules, or multi-stage approval workflows
+
+These constraints keep the project focused on proposal lifecycle rules, service-layer design, database transactions, testing, and deployment.
